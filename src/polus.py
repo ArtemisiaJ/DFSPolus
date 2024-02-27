@@ -56,7 +56,7 @@ def create_database(database_path):
     # Create exhibits table
     cur.execute("""CREATE TABLE IF NOT EXISTS exhibits (
         id INTEGER PRIMARY KEY,
-        case_id VARCHAR(50),
+        case_id VARCHAR(500),
         case_path VARCHAR(500),
         exhibit VARCHAR(50),
         windows VARCHAR(800),
@@ -288,31 +288,40 @@ def run_polus(polus_db_path, rsc_path):
 
     for case in cases_and_paths:
         if case.valid:
-            os_installations = get_case_number_and_exhibit_details(case.path)
-            if os_installations.case_id is None:
-                if case.case_id is None:
-                    case_id = 0
+            print(f'Case Path: {case.path}\n')
+            try:
+                os_installations = get_case_number_and_exhibit_details(case.path)
+                if os_installations.case_id is None:
+                    if case.case_id is None:
+                        case_id = 0
+                    else:
+                        try:
+                            case_id = case.path.split('')
+                        except Exception as e:
+                            case_id = f'Invalid - {case.case_id}'
+                            print(f'{e} - {case_id}')
                 else:
-                    case_id = case.path.split('')
-            else:
-                case_id = os_installations.case_id
-            case_path = case.path
-            print(f'Processing case {case_id}!\nPath: {case_path}')
-            exhibit = os_installations.exhibit
-            windows = os_installations.windows
-            mac = os_installations.mac
-            linux = os_installations.linux
+                    case_id = os_installations.case_id
+                case_path = case.path
+                print(f'Processing case {case_id}!\n')
+                exhibit = os_installations.exhibit
+                windows = os_installations.windows
+                mac = os_installations.mac
+                linux = os_installations.linux
 
-            insert_exhibit_to_database(polus_db_path, exhibit_details=ExhibitDetails(
-                case_id=case_id,
-                case_path=case_path,
-                exhibit=exhibit,
-                windows=windows,
-                mac=mac,
-                linux=linux
-            ))
+                insert_exhibit_to_database(polus_db_path, exhibit_details=ExhibitDetails(
+                    case_id=case_id,
+                    case_path=case_path,
+                    exhibit=exhibit,
+                    windows=windows,
+                    mac=mac,
+                    linux=linux
+                ))
 
-            print(f'Finished processing case {case_id}!\n')
+                print(f'Finished processing case {case_id}!\n')
+
+            except sqlite3.OperationalError:
+                print(f'Unable to process case as .mfdb file is in use!\n')
 
         else:
             print(f'{case.case_id} is not valid!\n{case.path}\n\n')

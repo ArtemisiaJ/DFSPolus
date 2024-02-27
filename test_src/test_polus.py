@@ -5,13 +5,13 @@ import src.polus
 
 
 def create_test_database():
-    src.polus.create_database(database_path='test_polus.db')
+    src.polus.create_database(database_path='polus.db')
 
 
 def close_and_delete_test_database(*args):
     if args:
         args[0].close()
-    os.remove('test_polus.db')
+    os.remove('polus.db')
 
 
 class TestPolusModules(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestPolusModules(unittest.TestCase):
         create_test_database()
 
         # Asserting that database was created
-        self.assertTrue(os.path.exists('test_polus.db'), msg='Database does not exist')
+        self.assertTrue(os.path.exists('polus.db'), msg='Database does not exist')
 
         # Close and delete test database
         close_and_delete_test_database()
@@ -31,7 +31,7 @@ class TestPolusModules(unittest.TestCase):
         create_test_database()
 
         # Fetching column with name 'exhibits'
-        conn, cur = src.polus.connect_to_database(database_path='test_polus.db')
+        conn, cur = src.polus.connect_to_database(database_path='polus.db')
         cur.execute("""SELECT name FROM sqlite_master WHERE type='table' AND name='exhibits'""")
         exhibits_table = cur.fetchone()[0]
 
@@ -46,7 +46,7 @@ class TestPolusModules(unittest.TestCase):
         create_test_database()
 
         # Declaring mock entries and inserting into test database
-        database_path = 'test_polus.db'
+        database_path = 'polus.db'
         expected_id = src.polus.get_highest_id_number(database_path) + 1
         exhibit_details = src.polus.ExhibitDetails(
             case_id='12345',
@@ -60,7 +60,7 @@ class TestPolusModules(unittest.TestCase):
         src.polus.insert_exhibit_to_database(database_path, exhibit_details)
 
         # Fetching mock exhibit details from test database
-        conn, cur = src.polus.connect_to_database(database_path='test_polus.db')
+        conn, cur = src.polus.connect_to_database(database_path='polus.db')
         cur.execute("""SELECT * FROM exhibits""")
         entry = cur.fetchall()[0]
         entry_id = entry[0]
@@ -136,7 +136,7 @@ class TestPolusModules(unittest.TestCase):
 
 class TestPolus(unittest.TestCase):
     def test_polus(self):
-        src.polus.run_polus(polus_db_path='test_polus.db',
+        src.polus.run_polus(polus_db_path='',
                             rsc_path='C:\\Users\\DFU\\PycharmProjects\\DFSPolus\\rsc')
 
         close_and_delete_test_database()
