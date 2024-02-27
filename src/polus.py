@@ -14,6 +14,7 @@ import re
 import sqlite3
 import os
 import sys
+import time
 
 
 ########################################################################################################################
@@ -276,24 +277,35 @@ def get_cases_and_paths(path):
 # Launch Script
 ########################################################################################################################
 
-def run_polus(polus_db_path, rsc_path):
-    polus_db_path = os.path.join(polus_db_path, 'polus.db')
-    create_database(polus_db_path)
-    if rsc_path is not None:
-        rsc_directory = rsc_path
+def run_polus(polus_db_path, rsc_path, *args):
+    if args:
+        cases_and_paths = args[0]
+        invalid_cases = args[1]
     else:
-        rsc_directory = input('Enter path to scan for .mfdb files:\n')
-    cases_and_paths = get_cases_and_paths(rsc_directory)
-    print(f'Cases found: {len(cases_and_paths)}\n')
+        polus_db_path = os.path.join(polus_db_path, 'polus.db')
+        create_database(polus_db_path)
+        invalid_cases = []
+
+        if rsc_path is not None:
+            print(f'Scanning path:\n{rsc_path}\n')
+            rsc_directory = rsc_path
+        else:
+            rsc_directory = input('Enter path to scan for .mfdb files:\n')
+
+        cases_and_paths = get_cases_and_paths(rsc_directory)
+        print(f'Cases found: {len(cases_and_paths)}\n')
+
+    busy_cases_and_paths = []
 
     for case in cases_and_paths:
         if case.valid:
-            print(f'Case Path: {case.path}\n')
+            print(f'Processing: {case.path}')
             try:
                 os_installations = get_case_number_and_exhibit_details(case.path)
                 if os_installations.case_id is None:
                     if case.case_id is None:
                         case_id = 0
+                        invalid_cases.append(case.path)
                     else:
                         try:
                             case_id = case.path.split('')
@@ -302,8 +314,9 @@ def run_polus(polus_db_path, rsc_path):
                             print(f'{e} - {case_id}')
                 else:
                     case_id = os_installations.case_id
-                case_path = case.path
+
                 print(f'Processing case {case_id}!\n')
+
                 exhibit = os_installations.exhibit
                 windows = os_installations.windows
                 mac = os_installations.mac
@@ -311,7 +324,7 @@ def run_polus(polus_db_path, rsc_path):
 
                 insert_exhibit_to_database(polus_db_path, exhibit_details=ExhibitDetails(
                     case_id=case_id,
-                    case_path=case_path,
+                    case_path=case.path,
                     exhibit=exhibit,
                     windows=windows,
                     mac=mac,
@@ -319,13 +332,29 @@ def run_polus(polus_db_path, rsc_path):
                 ))
 
                 print(f'Finished processing case {case_id}!\n')
+                if case in busy_cases_and_paths:
+                    busy_cases_and_paths.remove(case)
 
-            except sqlite3.OperationalError:
-                print(f'Unable to process case as .mfdb file is in use!\n')
+            except Exception as e:
+                print(f'Exception: {e}\n')
+                busy_cases_and_paths.append(case)
 
         else:
             print(f'{case.case_id} is not valid!\n{case.path}\n\n')
-    input('Processing complete!\nPress any key to exit the program...')
+
+    if len(busy_cases_and_paths) > 0:
+        print(f'Attempting to process cases which were busy! ({len(busy_cases_and_paths)})\nPausing processing for 5 '
+              f'minutes...\n')
+        time.sleep(30)
+
+        run_polus(polus_db_path, rsc_path, busy_cases_and_paths, invalid_cases)
+
+    else:
+        if len(invalid_cases) > 0:
+            print(f'The following cases were not processed due to invalid folder names/case numbers\n')
+            for case in invalid_cases:
+                print(f'{case.case_id, case.path}\n')
+        input('Processing complete!\nPress any key to exit the program...')
 
 
 if __name__ == '__main__':
