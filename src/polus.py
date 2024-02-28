@@ -15,6 +15,7 @@ import sqlite3
 import os
 import sys
 import time
+from typing import LiteralString
 
 
 ########################################################################################################################
@@ -252,24 +253,37 @@ def consolidate_installations(database_output):
 def get_cases_and_paths(path):
     cases_and_paths_list = []
 
+    previous_path = None
+    previous_path_length = None
+    file_counter = 0
+
     for folder in next(os.walk(path))[1]:
-        full_path = os.path.join(path, folder)
-        try:
-            case_id = int(folder[:5])
-            for root, dirs, files in os.walk(full_path):
-                for file in files:
-                    if file.endswith('.mfdb'):
+        full_path: LiteralString | str | bytes = os.path.join(path, folder)
+
+        # noinspection PyTypeChecker
+        for root, dirs, files in os.walk(full_path):
+            for file in files:
+
+                # Printing path currently being reviewed to the terminal
+                if previous_path_length is None:
+                    previous_path = os.path.join(root, file)
+                    previous_path_length = len(previous_path)
+                file_counter += 1
+                print(f'\r{"." * (previous_path_length + 2 + len(str(file_counter)))}', end='')
+                print(f'\r[{file_counter}] {previous_path}', end='')
+                previous_path = os.path.join(root, file)
+                previous_path_length = len(previous_path)
+
+                if file.endswith('.mfdb'):
+                    try:
+                        case_id = int(folder[:5])
                         case_and_path = CasePaths(case_id, full_path, valid=True)
-                        cases_and_paths_list.append(case_and_path)
-
-        except ValueError:
-            for root, dirs, files in os.walk(full_path):
-                for file in files:
-                    if file.endswith('.mfdb'):
-                        temp_var = os.path.join(full_path, file)
+                    except ValueError:
+                        temp_var = os.path.join(root, file)
                         case_and_path = CasePaths(folder, temp_var, valid=True)
-                        cases_and_paths_list.append(case_and_path)
+                    cases_and_paths_list.append(case_and_path)
 
+    print('\n')
     return cases_and_paths_list
 
 
@@ -345,7 +359,7 @@ def run_polus(polus_db_path, rsc_path, *args):
     if len(busy_cases_and_paths) > 0:
         print(f'Attempting to process cases which were busy! ({len(busy_cases_and_paths)})\nPausing processing for 5 '
               f'minutes...\n')
-        time.sleep(30)
+        time.sleep(300)
 
         run_polus(polus_db_path, rsc_path, busy_cases_and_paths, invalid_cases)
 

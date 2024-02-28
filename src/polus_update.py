@@ -14,7 +14,7 @@ def pyinstaller_thread():
 
 if __name__ == '__main__':
     pyinstaller_thread()
-    app_version = '1.1.0'
+    app_version = '1.1.1'
     script_path = str(dirname(realpath(__file__))).replace('polus_update.py', '')
     dist_path = join(dirname(realpath(__file__)), 'dist')
     old, new = join(dist_path, 'polus'), join(dist_path, f'DFS Polus [{app_version}]')
