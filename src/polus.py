@@ -257,33 +257,69 @@ def get_cases_and_paths(path):
     previous_path_length = None
     file_counter = 0
 
+    folders_to_skip = [
+        '#Lab scanner',
+        'Workstation Builds',
+        'Viewing Room',
+        'Validation',
+        'UKAS 2023',
+        'Testing',
+        'temp_extraction_path',
+        'TD3 Log',
+        'Servers',
+        'SCD Outputs',
+        'S-21 Training (TEMP)',
+        'Ref Media Audit',
+        'Python',
+        'Premium',
+        'NAT-D1-SSD',
+        'Natalie D Drive',
+        'FLOPPY LOADER',
+        'DFUSCD4128',
+        'DB Backup',
+        'Commander',
+        'Cellebrite Automation',
+        'CCTV',
+        'BING TEST',
+        'ADF TRAINING',
+        'ADF DEI Imager v2.7.0.43 Audit'
+    ]
+
     for folder in next(os.walk(path))[1]:
         full_path: LiteralString | str | bytes = os.path.join(path, folder)
 
         # noinspection PyTypeChecker
         for root, dirs, files in os.walk(full_path):
-            for file in files:
 
-                # Printing path currently being reviewed to the terminal
-                if previous_path_length is None:
+            root_check = root.rsplit('\\', 1)[1]
+
+            if root_check not in folders_to_skip:
+
+                for file in files:
+                    print(f'\nProcessing {root}\n')
+
+                    # Printing path currently being reviewed to the terminal
+                    if previous_path_length is None:
+                        previous_path = os.path.join(root, file)
+                        previous_path_length = len(previous_path)
+                    file_counter += 1
+                    print(f'\r{"." * (previous_path_length + 2 + len(str(file_counter)))}', end='')
+                    print(f'\r[{file_counter}] {previous_path}', end='')
                     previous_path = os.path.join(root, file)
                     previous_path_length = len(previous_path)
-                file_counter += 1
-                print(f'\r{"." * (previous_path_length + 2 + len(str(file_counter)))}', end='')
-                print(f'\r[{file_counter}] {previous_path}', end='')
-                previous_path = os.path.join(root, file)
-                previous_path_length = len(previous_path)
 
-                if file.endswith('.mfdb'):
-                    try:
-                        case_id = int(folder[:5])
-                        case_and_path = CasePaths(case_id, full_path, valid=True)
-                    except ValueError:
-                        temp_var = os.path.join(root, file)
-                        case_and_path = CasePaths(folder, temp_var, valid=True)
-                    cases_and_paths_list.append(case_and_path)
+                    if file.endswith('.mfdb'):
+                        try:
+                            case_id = int(folder[:5])
+                            case_and_path = CasePaths(case_id, full_path, valid=True)
+                        except ValueError:
+                            temp_var = os.path.join(root, file)
+                            case_and_path = CasePaths(folder, temp_var, valid=True)
+                        cases_and_paths_list.append(case_and_path)
 
-    print('\n')
+            else:
+                pass
+
     return cases_and_paths_list
 
 
@@ -301,19 +337,19 @@ def run_polus(polus_db_path, rsc_path, *args):
         invalid_cases = []
 
         if rsc_path is not None:
-            print(f'Scanning path:\n{rsc_path}\n')
+            print(f'\nScanning path:\n{rsc_path}\n')
             rsc_directory = rsc_path
         else:
             rsc_directory = input('Enter path to scan for .mfdb files:\n')
 
         cases_and_paths = get_cases_and_paths(rsc_directory)
-        print(f'Cases found: {len(cases_and_paths)}\n')
+        print(f'Cases found: [{len(cases_and_paths)}]\n')
 
     busy_cases_and_paths = []
 
     for case in cases_and_paths:
         if case.valid:
-            print(f'Processing: {case.path}')
+            print(f'[-] Processing: {case.path}')
             try:
                 os_installations = get_case_number_and_exhibit_details(case.path)
                 if os_installations.case_id is None:
@@ -329,7 +365,7 @@ def run_polus(polus_db_path, rsc_path, *args):
                 else:
                     case_id = os_installations.case_id
 
-                print(f'Processing case {case_id}!\n')
+                print(f'Case: {case_id}\n')
 
                 exhibit = os_installations.exhibit
                 windows = os_installations.windows
@@ -380,6 +416,3 @@ if __name__ == '__main__':
     else:
         run_polus(polus_db_path=input(f'\nEnter path to save polus database:\n'),
                   rsc_path=input(f'\nEnter path to scan for .mfdb files:\n'))
-
-
-# polus "C:\Users\DFU\PycharmProjects\DFSPolus\Test" "C:\Users\DFU\PycharmProjects\DFSPolus\rsc"
